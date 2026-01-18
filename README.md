@@ -1,6 +1,6 @@
 # 🏙️ CitiAssist - Your Smart City Companion
 
-![CitiAssist Banner](https://img.shields.io/badge/Status-Active-success) ![License](https://img.shields.io/badge/License-MIT-blue) ![Tech](https://img.shields.io/badge/AI-Powered-purple)
+![CitiAssist Banner](https://img.shields.io/badge/Status-Active-success) ![License](https://img.shields.io/badge/License-MIT-blue) ![Tech](https://img.shields.io/badge/AI-Powered-purple) ![Docker](https://img.shields.io/badge/Docker-Ready-blue)
 
 **CitiAssist** is an intelligent, AI-powered smart city guide designed to bridge the gap between citizens and urban infrastructure. Built with accessibility at its core, it helps users navigate city services, report civic issues, and understand complex government paperwork using advanced Generative AI.
 
@@ -9,9 +9,10 @@
 ## 🚀 Key Features
 
 ### 🤖 AI-Powered City Guide
-*   **Context-Aware Chat**: Ask about hospitals, public transport, electricity, water, and waste management.
+*   **Context-Aware Chat**: Ask about hospitals, public transport, electricity, water, waste management, and government services.
 *   **Hyper-Local Knowledge**: Provides specific details, map links, and official portal URLs.
 *   **Scope Protection**: Strictly tailored to civic needs, filtering out irrelevant queries.
+*   **Streaming Responses**: Enjoy a natural, typewriter-style conversational interface.
 
 ### 📸 Snap & Solve (AI Civic Reporter)
 *   **Visual Complaint Drafting**: Spot a pothole or uncollected trash? Just snap a photo.
@@ -27,7 +28,7 @@
 
 ### 🌏 Multilingual Support
 *   **Language Detection**: Automatically detects and responds in **English, Hindi, and Telugu**.
-*   **Localized Context**: optimized for Indian cities context (with placeholders for expansion).
+*   **Localized Context**: optimized for Indian cities context.
 
 ---
 
@@ -37,17 +38,17 @@
 *   **Framework**: React (Vite)
 *   **Styling**: Tailwind CSS (Glassmorphism design)
 *   **Speech**: Web Speech API (Recognition & Synthesis)
-*   **State Management**: React Hooks
+*   **Deployment**: Docker / Static Hosting
 
 ### Backend
-*   **Server**: Flask (Python)
+*   **Server**: Flask (Python) with Gunicorn
 *   **AI Model**: Google Gemini 2.5 Flash (via `google-generativeai`)
-*   **Rate Limiting/CORS**: Flask-CORS
 *   **Image Processing**: Pillow (PIL)
+*   **Analysis**: Gemini Vision (Multimodal)
 
 ---
 
-## 🏗️ Installation & Setup
+## 🏗️ Local Installation
 
 ### Prerequisites
 *   Node.js & npm
@@ -63,7 +64,7 @@ cd CitiAssist
 ### 2. Backend Setup
 ```bash
 # Install Python dependencies
-pip install flask flask-cors google-generativeai python-dotenv pillow
+pip install -r requirements.txt
 
 # Set up Environment Variables
 # Create a .env file in the root directory
@@ -86,20 +87,39 @@ Visit `http://localhost:5173` to view the application.
 
 ---
 
-## 💡 Usage Examples
+## 🐳 Docker Support (Recommended)
 
-*   **Public Transport**: "What is the timing for the last metro from Hitech City?"
-*   **Healthcare**: "Find nearby government hospitals."
-*   **Snap & Solve**: Upload a photo of a broken street light -> Get a complaint letter.
-*   **Paperwork**: Upload a Driving License form -> Get filling instructions.
+Run the entire stack in isolated containers with a single command.
+
+1.  Ensure **Docker Desktop** is running.
+2.  Make sure your `.env` file exists.
+3.  Run:
+    ```bash
+    docker-compose up --build
+    ```
+4.  Access the app at `http://localhost:5173`.
 
 ---
 
-## 🔮 Future Roadmap
-- [ ] **Real-time Integration**: Live tracking of buses/metro.
-- [ ] **Location-Based Search**: Automatic GPS detection for "Hospitals near me".
-- [ ] **Community Leaderboard**: Gamification for reporting civic issues.
-- [ ] **Offline Mode**: SMS-based queries for low-connectivity areas.
+## ☁️ Deployment (Render)
+
+This project is configured for **Zero-Config Deployment** on Render.
+
+1.  Push your code to GitHub.
+2.  Log in to [Render](https://render.com).
+3.  Create a new **Blueprint Instance**.
+4.  Select your repository.
+5.  Enter your `GEMINI_API_KEY` when prompted.
+6.  Render will automatically deploy the Backend (Python/Gunicorn) and Frontend (React/Static) and link them together.
+
+---
+
+## 💡 Usage Examples
+
+*   **Public Transport**: "What is the timing for the last metro from Hitech City?"
+*   **Government Services**: "How do I apply for a PAN card?"
+*   **Snap & Solve**: Upload a photo of a broken street light -> Get a complaint letter.
+*   **Paperwork**: Upload a Driving License form -> Get filling instructions.
 
 ---
 

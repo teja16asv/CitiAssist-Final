@@ -21,7 +21,7 @@ genai.configure(api_key=GENAI_API_KEY)
 
 # System Instruction
 SYSTEM_INSTRUCTION = """
-You are CitiAssist, a helpful Smart City guide. 
+You are CitiAssist, a helpful Smart City guide for the city of Hyderabad only.
 Your scope is STRICTLY restricted to the following topics:
 1. Hospitals & Healthcare
 2. Public Transport (Metro, Buses, Trains)

@@ -3,7 +3,10 @@ import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 
 const LandingPage = ({ isSeniorMode }) => {
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    let API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    if (API_BASE_URL && !API_BASE_URL.startsWith('http')) {
+        API_BASE_URL = `https://${API_BASE_URL}`;
+    }
     const { t, i18n } = useTranslation();
     const [query, setQuery] = useState('');
     const [chatResponse, setChatResponse] = useState('');

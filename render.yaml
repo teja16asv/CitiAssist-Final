@@ -20,4 +20,4 @@ services:
         fromService:
           type: web
           name: citiassist-backend
-          property: url
+          property: host
