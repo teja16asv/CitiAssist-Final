@@ -7,10 +7,10 @@ import os
 # 3. Run: python test_key_direct.py
 # --------------------
 
-TEST_API_KEY = "AIzaSyANGan7kRSh14bB0ES_hT3G1i7TAcQGGY8"
+TEST_API_KEY = ""
 
 # If you prefer to stick with .env, we can try to load it, but direct pasting is safer for debugging.
-if TEST_API_KEY == "AIzaSyANGan7kRSh14bB0ES_hT3G1i7TAcQGGY8":
+if TEST_API_KEY == "":
     from dotenv import load_dotenv
     load_dotenv()
     TEST_API_KEY = os.getenv("GEMINI_API_KEY")

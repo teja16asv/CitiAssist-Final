@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-const Header = () => {
+const Header = ({ isSeniorMode, toggleSeniorMode }) => {
     const { t, i18n } = useTranslation();
 
     const cycleLanguage = () => {
@@ -27,7 +27,19 @@ const Header = () => {
                 </h1>
             </div>
 
-            <div className="flex items-center">
+            <div className="flex items-center gap-4">
+                <button
+                    onClick={toggleSeniorMode}
+                    className={`flex items-center gap-2 px-4 py-2 text-sm font-bold transition-all rounded-full border border-stone-300 ${isSeniorMode ? 'bg-amber-400 text-stone-900 shadow-md scale-105' : 'bg-transparent text-stone-500 hover:bg-stone-100'}`}
+                    title={isSeniorMode ? "Senior Mode ON" : "Enable Senior Mode"}
+                >
+                    {isSeniorMode ? (
+                        <span className="flex items-center gap-1">👴 <span className="hidden sm:inline">Senior Mode ON</span></span>
+                    ) : (
+                        <span className="flex items-center gap-1">👓 <span className="hidden sm:inline">Senior Mode</span></span>
+                    )}
+                </button>
+
                 <button
                     onClick={cycleLanguage}
                     className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors rounded-full hover:bg-white/50"

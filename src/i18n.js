@@ -10,9 +10,9 @@ const resources = {
             "searchPlaceholder": "Search for services, documents, or information...",
             "heroTitle": "How can we help you today?",
             "quickLinks": {
-                "payBills": "Pay Bills",
-                "cityMap": "City Map",
-                "events": "Events"
+                "hospitals": "Hospitals near me",
+                "metro": "Metro Stations",
+                "electricity": "Electricity Bill Payment"
             },
             "language": "English",
             "listening": "Listening...",
@@ -25,9 +25,9 @@ const resources = {
             "searchPlaceholder": "సేవలు, పత్రాలు లేదా సమాచారం కోసం వెతకండి...",
             "heroTitle": "ఈ రోజు మేము మీకు ఎలా సహాయపడగలము?",
             "quickLinks": {
-                "payBills": "బిల్లులు చెల్లించండి",
-                "cityMap": "నగర పటం",
-                "events": "కార్యక్రమాలు"
+                "hospitals": "నా దగ్గర్లో ఉన్న ఆసుపత్రులు",
+                "metro": "మెట్రో స్టేషన్లు",
+                "electricity": "విద్యుత్ బిల్లు చెల్లింపు"
             },
             "language": "తెలుగు",
             "listening": "వింటున్నాను...",
@@ -40,9 +40,9 @@ const resources = {
             "searchPlaceholder": "सेवाएं, दस्तावेज़ या जानकारी खोजें...",
             "heroTitle": "आज हम आपकी कैसे मदद कर सकते हैं?",
             "quickLinks": {
-                "payBills": "बिल का भुगतान करें",
-                "cityMap": "शहर का नक्शा",
-                "events": "कार्यक्रम"
+                "hospitals": "मेरे पास के अस्पताल",
+                "metro": "मेट्रो स्टेशन",
+                "electricity": "बिजली बिल भुगतान"
             },
             "language": "हिंदी",
             "listening": "सुन रहा हूँ...",
