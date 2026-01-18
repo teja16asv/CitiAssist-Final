@@ -3,6 +3,7 @@ services:
   - type: web
     name: citiassist-backend
     runtime: python
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn main:app
     envVars:
