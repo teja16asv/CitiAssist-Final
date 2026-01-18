@@ -10,7 +10,7 @@ const resources = {
             "searchPlaceholder": "Search for services, documents, or information...",
             "heroTitle": "How can we help you today?",
             "quickLinks": {
-                "hospitals": "Hospitals near me",
+                "hospitals": "Find Hospitals",
                 "metro": "Metro Stations",
                 "electricity": "Electricity Bill Payment"
             },

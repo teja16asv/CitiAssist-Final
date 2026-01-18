@@ -1,0 +1,29 @@
+# Build stage
+FROM node:18-alpine as build
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+# Production stage
+# We'll use a simple static server to serve the build
+FROM node:18-alpine
+
+WORKDIR /app
+
+RUN npm install -g serve
+
+# Copy the build output from the previous stage
+COPY --from=build /app/dist /app/dist
+
+# Expose port 5173 (standard Vite port, though 'serve' defaults to 3000, we'll map it)
+EXPOSE 5173
+
+# Serve the 'dist' folder on port 5173
+CMD ["serve", "-s", "dist", "-l", "5173"]

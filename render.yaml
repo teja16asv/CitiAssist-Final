@@ -1,0 +1,23 @@
+services:
+  # Python Backend
+  - type: web
+    name: citiassist-backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn main:app
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false # User will enter this in Render Dashboard
+
+  # React Frontend
+  - type: web
+    name: citiassist-frontend
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run preview -- --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: citiassist-backend
+          property: url

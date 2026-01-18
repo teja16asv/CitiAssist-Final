@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 
 const LandingPage = ({ isSeniorMode }) => {
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     const { t, i18n } = useTranslation();
     const [query, setQuery] = useState('');
     const [chatResponse, setChatResponse] = useState('');
@@ -162,7 +163,7 @@ const LandingPage = ({ isSeniorMode }) => {
         window.speechSynthesis.cancel();
 
         try {
-            const response = await fetch('http://localhost:5000/api/chat', {
+            const response = await fetch(`${API_BASE_URL}/api/chat`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -209,7 +210,7 @@ const LandingPage = ({ isSeniorMode }) => {
         formData.append('image', file);
 
         try {
-            const response = await fetch('http://localhost:5000/api/report-issue', {
+            const response = await fetch(`${API_BASE_URL}/api/report-issue`, {
                 method: 'POST',
                 body: formData,
             });
@@ -247,7 +248,7 @@ const LandingPage = ({ isSeniorMode }) => {
         formData.append('image', file);
 
         try {
-            const response = await fetch('http://localhost:5000/api/analyze-document', {
+            const response = await fetch(`${API_BASE_URL}/api/analyze-document`, {
                 method: 'POST',
                 body: formData,
             });
