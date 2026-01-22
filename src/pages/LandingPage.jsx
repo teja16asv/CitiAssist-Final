@@ -14,6 +14,9 @@ const LandingPage = ({ isSeniorMode }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isListening, setIsListening] = useState(false);
     const [browserSupportsSpeech, setBrowserSupportsSpeech] = useState(false);
+    const [uploadedImage, setUploadedImage] = useState(null);
+    const [emailData, setEmailData] = useState(null);
+    const [locationInput, setLocationInput] = useState('');
     const fileInputRef = useRef(null);
     const docInputRef = useRef(null);
 
@@ -120,15 +123,20 @@ const LandingPage = ({ isSeniorMode }) => {
         // Just set basic query first so UI feels responsive
         setQuery(label);
 
-        // Define which keys need location
-        const locationKeys = ['hospitals', 'metro', 'electricity'];
+        // Smart "Near Me" logic for quick links (adding coordinates if relevant)
+        // We reuse the logic: if the label or key implies location, we fetch it.
+        // The original code had a list of keys. We can simplify by just checking "near me" or keeping the specific keys.
+        // Let's keep the specific keys as they are buttons that imply "Near Me" even if the text doesn't say it explicitly? 
+        // Actually, let's standardize. If the quick link label has "near me" or if it is in the list, we fetch location.
 
-        if (locationKeys.includes(key)) {
+        const locationKeys = ['hospitals', 'metro', 'electricity'];
+        const needsLocation = locationKeys.includes(key) || label.toLowerCase().includes('near me');
+
+        if (needsLocation) {
             setIsLoading(true);
             window.speechSynthesis.cancel();
 
             try {
-                // Check if browser supports geolocation
                 if ('geolocation' in navigator) {
                     const position = await new Promise((resolve, reject) => {
                         navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -139,21 +147,23 @@ const LandingPage = ({ isSeniorMode }) => {
                     const { latitude, longitude } = position.coords;
                     const locationQuery = `${label} near ${latitude}, ${longitude}`;
 
-                    // Update query visually
-                    setQuery(locationQuery);
+                    // Update query visually (optional, or keep label) - let's keep label in input but send locationQuery
+                    // setQuery(locationQuery); // Actually, user might want to see what happened.
+
                     await executeSearch(locationQuery);
                 } else {
-                    // Fallback if no geolocation support
                     await executeSearch(label);
                 }
             } catch (error) {
                 console.warn("Location access denied or error:", error);
                 await executeSearch(label);
             } finally {
-                setIsLoading(false);
+                // executeSearch handles isLoading(false) but we set it true here.
+                // If executeSearch is called, it sets loading true then false. 
+                // If we error before calling it, we need to turn it off? 
+                // executeSearch handles it. 
             }
         } else {
-            // Normal search for non-location items
             await executeSearch(label);
         }
     };
@@ -162,7 +172,11 @@ const LandingPage = ({ isSeniorMode }) => {
         if (!searchQuery.trim()) return;
 
         setIsLoading(true);
+        setIsLoading(true);
         setChatResponse('');
+        setUploadedImage(null); // Clear previous image on new search
+        setEmailData(null);     // Clear previous email data
+        setLocationInput('');   // Clear location input
         window.speechSynthesis.cancel();
 
         try {
@@ -197,12 +211,45 @@ const LandingPage = ({ isSeniorMode }) => {
 
     const handleSearch = async (e) => {
         e.preventDefault();
+
+        // Smart "Near Me" Detection
+        if (query.toLowerCase().includes('near me')) {
+            if ('geolocation' in navigator) {
+                setIsLoading(true); // Show loading while fetching location
+                try {
+                    const position = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, {
+                            timeout: 5000
+                        });
+                    });
+
+                    const { latitude, longitude } = position.coords;
+                    // Append location to the query
+                    const locationQuery = `${query} (Current Location: ${latitude}, ${longitude})`;
+                    await executeSearch(locationQuery);
+                    return; // Stop here, executeSearch was called
+                } catch (error) {
+                    console.warn("Location access denied or timed out:", error);
+                    // Fallback to normal search if location fails
+                }
+            } else {
+                console.warn("Geolocation not supported");
+            }
+        }
+
+        // Normal search (or fallback)
         await executeSearch(query);
     };
 
     const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
+
+        // Create preview URL
+        const imageUrl = URL.createObjectURL(file);
+        setUploadedImage(imageUrl);
+        setEmailData(null); // Reset email data for new upload
+        setLocationInput(''); // Reset location for new upload
 
         setIsLoading(true);
         setChatResponse('');
@@ -219,6 +266,15 @@ const LandingPage = ({ isSeniorMode }) => {
             });
 
             const data = await response.json();
+
+            // Handle new JSON structure with email details
+            if (data.recipient_email || data.body) {
+                setEmailData({
+                    recipient_email: data.recipient_email,
+                    subject: data.subject,
+                    body: data.body
+                });
+            }
 
             if (data.response) {
                 setChatResponse(data.response);
@@ -374,40 +430,97 @@ const LandingPage = ({ isSeniorMode }) => {
                     </div>
                 </form>
 
-                {chatResponse && (
+                {(chatResponse || uploadedImage) && (
                     <div className="w-full max-w-2xl mx-auto mt-6 bg-white/90 backdrop-blur-md p-6 rounded-2xl shadow-xl text-left animate-fade-in border border-white/50">
-                        <div className={`prose prose-stone max-w-none prose-a:text-blue-600 prose-a:underline hover:prose-a:text-blue-800 ${responseTextClasses}`}>
-                            <ReactMarkdown
-                                components={{
-                                    a: ({ node, ...props }) => (
-                                        <a
-                                            {...props}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className={`inline-flex items-center gap-1.5 px-3 py-1 my-1 font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:text-blue-800 transition-colors no-underline ${isSeniorMode ? 'text-xl py-2 px-4' : 'text-sm'}`}
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={isSeniorMode ? "w-6 h-6" : "w-4 h-4"}>
-                                                <path fillRule="evenodd" d="M12.577 4.878a.75.75 0 01.919-.53l4.78 1.281a.75.75 0 01.531.919l-1.281 4.78a.75.75 0 01-1.449-.387l.81-3.022a19.407 19.407 0 00-5.594 5.203.75.75 0 01-1.139.093L1.928 4.733a.75.75 0 11.535-1.405l7.26 2.768a20.897 20.897 0 014.854-1.218z" clipRule="evenodd" />
-                                            </svg>
-                                            {props.children}
-                                        </a>
-                                    ),
-                                    ul: ({ node, ...props }) => <ul className="space-y-4 my-4 list-none pl-0" {...props} />,
-                                    li: ({ node, ...props }) => (
-                                        <li className="flex gap-3 items-start p-3 bg-white/50 rounded-lg border border-white/60" {...props}>
-                                            <span className={`mt-2 rounded-full bg-stone-400 flex-shrink-0 ${isSeniorMode ? "w-3 h-3" : "w-2 h-2"}`} />
-                                            <div className="flex-1 text-stone-700 leading-relaxed">{props.children}</div>
-                                        </li>
-                                    ),
-                                    h3: ({ node, ...props }) => <h3 className={`${isSeniorMode ? "text-3xl mt-10 mb-6" : "text-xl mt-8 mb-4"} font-bold text-stone-800 border-b border-stone-200 pb-2`} {...props} />,
-                                    strong: ({ node, ...props }) => <strong className="font-bold text-stone-900" {...props} />,
-                                    p: ({ node, ...props }) => <p className="mb-4 text-stone-700 leading-relaxed" {...props} />,
-                                }}
-                            >
+                        {uploadedImage && (
+                            <div className="mb-6 flex justify-center">
+                                <img
+                                    src={uploadedImage}
+                                    alt="Uploaded"
+                                    className="max-w-full h-auto max-h-64 rounded-xl shadow-md border border-stone-200"
+                                />
+                            </div>
+                        )}
 
-                                {displayedResponse}
-                            </ReactMarkdown>
-                        </div>
+                        {chatResponse && (
+                            <div className={`prose prose-stone max-w-none prose-a:text-blue-600 prose-a:underline hover:prose-a:text-blue-800 ${responseTextClasses}`}>
+                                <ReactMarkdown
+                                    components={{
+                                        a: ({ node, ...props }) => (
+                                            <a
+                                                {...props}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className={`inline-flex items-center gap-1.5 px-3 py-1 my-1 font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:text-blue-800 transition-colors no-underline ${isSeniorMode ? 'text-xl py-2 px-4' : 'text-sm'}`}
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={isSeniorMode ? "w-6 h-6" : "w-4 h-4"}>
+                                                    <path fillRule="evenodd" d="M12.577 4.878a.75.75 0 01.919-.53l4.78 1.281a.75.75 0 01.531.919l-1.281 4.78a.75.75 0 01-1.449-.387l.81-3.022a19.407 19.407 0 00-5.594 5.203.75.75 0 01-1.139.093L1.928 4.733a.75.75 0 11.535-1.405l7.26 2.768a20.897 20.897 0 014.854-1.218z" clipRule="evenodd" />
+                                                </svg>
+                                                {props.children}
+                                            </a>
+                                        ),
+                                        ul: ({ node, ...props }) => <ul className="space-y-4 my-4 list-none pl-0" {...props} />,
+                                        li: ({ node, ...props }) => (
+                                            <li className="flex gap-3 items-start p-3 bg-white/50 rounded-lg border border-white/60" {...props}>
+                                                <span className={`mt-2 rounded-full bg-stone-400 flex-shrink-0 ${isSeniorMode ? "w-3 h-3" : "w-2 h-2"}`} />
+                                                <div className="flex-1 text-stone-700 leading-relaxed">{props.children}</div>
+                                            </li>
+                                        ),
+                                        h3: ({ node, ...props }) => <h3 className={`${isSeniorMode ? "text-3xl mt-10 mb-6" : "text-xl mt-8 mb-4"} font-bold text-stone-800 border-b border-stone-200 pb-2`} {...props} />,
+                                        strong: ({ node, ...props }) => <strong className="font-bold text-stone-900" {...props} />,
+                                        p: ({ node, ...props }) => <p className="mb-4 text-stone-700 leading-relaxed" {...props} />,
+                                    }}
+                                >
+                                    {displayedResponse}
+                                </ReactMarkdown>
+                            </div>
+                        )}
+
+                        {emailData && emailData.recipient_email && (
+                            <div className="mt-6 pt-4 border-t border-stone-200">
+                                <div className="mb-4">
+                                    <label htmlFor="location" className="block text-sm font-medium text-stone-700 mb-1">
+                                        Location of Issue (Optional)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="location"
+                                        value={locationInput}
+                                        onChange={(e) => setLocationInput(e.target.value)}
+                                        placeholder="e.g. Jubilee Hills Road No. 10"
+                                        className={`w-full px-4 py-2 rounded-xl border border-stone-300 focus:ring-2 focus:ring-stone-400 focus:border-transparent outline-none transition-all ${isSeniorMode ? 'text-xl h-14' : 'text-base'}`}
+                                    />
+                                </div>
+
+                                {(() => {
+                                    const finalSubject = emailData.subject.replace('[Location]', locationInput || 'Hyderabad');
+
+                                    let finalBody = emailData.body.replace('[Date]', new Date().toLocaleDateString());
+                                    if (finalBody.includes('[Location]')) {
+                                        finalBody = finalBody.replace('[Location]', locationInput || '[Location]');
+                                    } else if (locationInput) {
+                                        // Fallback: Append location if placeholder is missing
+                                        finalBody += `\n\nLocation of Issue: ${locationInput}`;
+                                    }
+
+                                    return (
+                                        <a
+                                            href={`mailto:${emailData.recipient_email}?subject=${encodeURIComponent(finalSubject)}&body=${encodeURIComponent(finalBody)}`}
+                                            className={`inline-flex items-center gap-2 bg-stone-800 hover:bg-stone-700 text-white font-medium rounded-xl shadow-md transform transition-transform active:scale-95 ${isSeniorMode ? 'px-6 py-4 text-xl w-full justify-center' : 'px-4 py-2 text-base'}`}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={isSeniorMode ? "w-6 h-6" : "w-5 h-5"}>
+                                                <path d="M1.5 8.67v8.58a3 3 0 003 3h15a3 3 0 003-3V8.67l-8.928 5.493a3 3 0 01-3.144 0L1.5 8.67z" />
+                                                <path d="M22.5 6.908V6.75a3 3 0 00-3-3h-15a3 3 0 00-3 3v.158l9.714 5.978a1.5 1.5 0 001.572 0L22.5 6.908z" />
+                                            </svg>
+                                            Draft Email to Official
+                                        </a>
+                                    );
+                                })()}
+                                <p className="mt-2 text-sm text-stone-500 italic">
+                                    *Please attach a photo manually as browsers block automatic attachments.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 )}
 

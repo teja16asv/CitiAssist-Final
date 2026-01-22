@@ -1,9 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import LandingPage from './pages/LandingPage';
+import SplashScreen from './components/SplashScreen';
 
 function App() {
   const [isSeniorMode, setIsSeniorMode] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2500); // Total duration 2.5s
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (showSplash) {
+    return <SplashScreen />;
+  }
 
   return (
     <div className={`min-h-screen flex flex-col font-sans text-civic-text w-full transition-all duration-300 ${isSeniorMode ? 'text-xl' : ''}`}>

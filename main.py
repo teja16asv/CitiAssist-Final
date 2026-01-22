@@ -33,6 +33,10 @@ Rules:
 - If a user asks about anything OUTSIDE these 5 categories, explicitly state "Data not available" and that it is out of scope.
 - DETECT the language of the user's query and RESPOND IN THE SAME LANGUAGE.
 - **FORMATTING**: Use Markdown. **Bold** names/headers. Lists for readability.
+- **LOCATION/GPS HANDLING**:
+  - If the user provides "Current Location: [Lat], [Long]", USE these coordinates to identify the area (e.g., Gachibowli, Jubilee Hills).
+  - Provide results *specifically* near that determined location.
+  - Do NOT ask the user for their location again if coordinates are provided.
 - **MANDATORY LINKING RULE**: 
   - You MUST providing a clickable link for every single location or service mentioned.
   - **Locations**: Use this Google Maps format: `[Location Name](https://www.google.com/maps/search/?api=1&query=Location+Name)`
@@ -60,8 +64,31 @@ def chat():
         if not user_message:
             return jsonify({'error': 'Message is required'}), 400
 
+        print(f"DEBUG: Received message: {user_message}")
+
+        # Debug: Print received message
+        print(f"DEBUG: Received message: {user_message}")
+
+        # Smart Location Handling: Extract coordinates and force context
+        import re
+        # matches "(Current Location: 17.44, 78.34)"
+        coord_match = re.search(r'\(Current Location: ([\d.-]+),\s*([\d.-]+)\)', user_message)
+        
+        final_prompt = user_message
+        if coord_match:
+            lat, long = coord_match.groups()
+            print(f"DEBUG: Detected Coordinates - Lat: {lat}, Long: {long}")
+            
+            # Create a strong context prefix
+            location_context = (
+                f"SYSTEM QUERY CONTEXT: The user is currently located at Latitude {lat}, Longitude {long}. "
+                f"You MUST provide results specifically near these coordinates. "
+                f"Do not ask for location again. Assume this is the user's precise location.\n\n"
+            )
+            final_prompt = location_context + user_message
+
         # Generate content
-        response = model.generate_content(user_message)
+        response = model.generate_content(final_prompt)
         
         # Check if response has content (might be blocked by safety settings)
         if response.parts:
@@ -99,18 +126,44 @@ def report_issue():
 
         prompt = """
         Analyze this image for civic issues (e.g., potholes, garbage, broken streetlights, traffic violations, parking issues). 
-        1. Identify the specific issue.
-        2. Draft a polite but formal complaint letter to the Municipal Commissioner describing the issue. 
-        3. Include placeholders for [Location] and [Date] if they cannot be inferred.
-        4. Output the response in Markdown format.
-        If no civic issue is detected, simply state that no issue was found.
+        
+        RETURN A JSON OBJECT ONLY. NO MARKDOWN FORMATTING.
+        The JSON key 'response' should be in Markdown format for display.
+        
+        Result Format:
+        {
+            "recipient_email": "Official email of the relevant authority in Hyderabad (e.g., commissioner@ghmc.gov.in for GHMC, or Cyberabad Traffic Police email, etc.)",
+            "subject": "Formal subject line for the complaint - citing [Location]",
+            "body": "Formal complaint letter body. YOU MUST INCLUDE the exact text '[Location]' so the user can fill it in. Example: 'I observed a pothole at [Location]...'",
+            "response": "A polite summary to the user explaining the issue and that a draft is ready (Markdown supported)"
+        }
+        
+        If no civic issue is detected:
+        {
+            "recipient_email": "",
+            "subject": "",
+            "body": "",
+            "response": "No civic issue detected in this image."
+        }
         """
 
-        response = model.generate_content([prompt, image])
+        response = model.generate_content([prompt, image], generation_config={"response_mime_type": "application/json"})
         
-        reply_text = response.text if response.parts else "Could not generate report due to safety settings."
+        import json
+        try:
+            # Clean up potential markdown code blocks if the model ignores the instruction (though mime_type helps)
+            text_response = response.text.replace('```json', '').replace('```', '').strip()
+            response_json = json.loads(text_response)
+        except json.JSONDecodeError:
+            print("Failed to decode JSON from model")
+            response_json = {
+                "recipient_email": "",
+                "subject": "Civic Issue Report", 
+                "body": response.text,
+                "response": response.text
+            }
 
-        return jsonify({'response': reply_text})
+        return jsonify(response_json)
 
     except Exception as e:
         import traceback
