@@ -1,0 +1,18 @@
+{
+    "name": "CitiAssist - Smart City Guide",
+    "short_name": "CitiAssist",
+    "description": "AI-Powered Smart City Companion for Hyderabad",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#0f172a",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/vite.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}

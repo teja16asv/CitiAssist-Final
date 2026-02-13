@@ -348,36 +348,57 @@ const LandingPage = ({ isSeniorMode }) => {
                 </h2>
 
                 <form onSubmit={handleSearch} className="relative w-full max-w-2xl mx-auto">
-                    <div className="relative group">
-                        <input
-                            type="text"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            placeholder={isListening ? t('listening') : t('searchPlaceholder')}
-                            className={`w-full ${inputClasses} pr-24 rounded-3xl border-0 shadow-lg shadow-stone-300/40 focus:ring-2 focus:ring-stone-400 focus:shadow-xl bg-white/80 backdrop-blur-sm placeholder:text-stone-400 text-stone-800 transition-all duration-300 outline-none ${isListening ? 'ring-2 ring-red-400 animate-pulse' : ''}`}
-                        />
+                    <div className="relative group flex flex-col gap-4">
+                        <div className="relative w-full">
+                            <input
+                                type="text"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder={isListening ? t('listening') : t('searchPlaceholder')}
+                                className={`w-full ${inputClasses} ${isSeniorMode ? 'pr-20' : 'pr-32'} rounded-3xl border-0 shadow-lg shadow-stone-300/40 focus:ring-2 focus:ring-stone-400 focus:shadow-xl bg-white/80 backdrop-blur-sm placeholder:text-stone-400 text-stone-800 transition-all duration-300 outline-none ${isListening ? 'ring-2 ring-red-400 animate-pulse' : ''}`}
+                            />
 
-                        {/* Hidden File Input */}
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleImageUpload}
-                            accept="image/*"
-                            className="hidden"
-                        />
-                        <input
-                            type="file"
-                            ref={docInputRef}
-                            onChange={handleDocUpload}
-                            accept="image/*"
-                            className="hidden"
-                        />
+                            {/* Standard Search Button (Inside Input) */}
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className={`${buttonClasses} bg-stone-800 text-white rounded-full hover:bg-stone-700 transition-transform active:scale-95 shadow-md flex items-center justify-center disabled:opacity-50`}
+                                    aria-label="Search"
+                                >
+                                    {isLoading ? (
+                                        <div className={`${iconSize} border-2 border-white/30 border-t-white rounded-full animate-spin`}></div>
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={iconSize}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
 
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
+                        {/* Action Buttons: Below input for Mobile/Senior Mode to prevent overlap */}
+                        <div className={`flex justify-center gap-4 ${isSeniorMode ? 'flex-row' : 'absolute right-20 top-1/2 -translate-y-1/2'}`}>
+                            {/* Hidden File Input */}
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleImageUpload}
+                                accept="image/*"
+                                className="hidden"
+                            />
+                            <input
+                                type="file"
+                                ref={docInputRef}
+                                onChange={handleDocUpload}
+                                accept="image/*"
+                                className="hidden"
+                            />
+
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
-                                className={`${buttonClasses} rounded-full transition-transform active:scale-95 flex items-center justify-center bg-transparent text-stone-500 hover:bg-stone-100`}
+                                className={`${buttonClasses} rounded-full transition-transform active:scale-95 flex items-center justify-center bg-white/50 backdrop-blur-md border border-white/60 text-stone-600 hover:bg-white hover:text-stone-900 shadow-sm`}
                                 aria-label="Snap & Solve"
                                 title="Snap & Solve"
                             >
@@ -389,7 +410,7 @@ const LandingPage = ({ isSeniorMode }) => {
                             <button
                                 type="button"
                                 onClick={() => docInputRef.current?.click()}
-                                className={`${buttonClasses} rounded-full transition-transform active:scale-95 flex items-center justify-center bg-transparent text-stone-500 hover:bg-stone-100`}
+                                className={`${buttonClasses} rounded-full transition-transform active:scale-95 flex items-center justify-center bg-white/50 backdrop-blur-md border border-white/60 text-stone-600 hover:bg-white hover:text-stone-900 shadow-sm`}
                                 aria-label="Analyze Document"
                                 title="Simplify Paperwork"
                             >
@@ -401,7 +422,7 @@ const LandingPage = ({ isSeniorMode }) => {
                                 <button
                                     type="button"
                                     onClick={startListening}
-                                    className={`${buttonClasses} rounded-full transition-transform active:scale-95 flex items-center justify-center ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-transparent text-stone-500 hover:bg-stone-100'}`}
+                                    className={`${buttonClasses} rounded-full transition-transform active:scale-95 flex items-center justify-center shadow-sm ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-white/50 backdrop-blur-md border border-white/60 text-stone-600 hover:bg-white hover:text-stone-900'}`}
                                     aria-label="Voice Search"
                                     title="Voice Search"
                                 >
@@ -411,21 +432,6 @@ const LandingPage = ({ isSeniorMode }) => {
                                     </svg>
                                 </button>
                             )}
-
-                            <button
-                                type="submit"
-                                disabled={isLoading}
-                                className={`${buttonClasses} bg-stone-800 text-white rounded-full hover:bg-stone-700 transition-transform active:scale-95 shadow-md flex items-center justify-center disabled:opacity-50`}
-                                aria-label="Search"
-                            >
-                                {isLoading ? (
-                                    <div className={`${iconSize} border-2 border-white/30 border-t-white rounded-full animate-spin`}></div>
-                                ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={iconSize}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                                    </svg>
-                                )}
-                            </button>
                         </div>
                     </div>
                 </form>
