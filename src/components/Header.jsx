@@ -20,7 +20,7 @@ const Header = ({ isSeniorMode, toggleSeniorMode }) => {
     };
 
     return (
-        <header className="flex justify-between items-center py-6 px-8 max-w-7xl mx-auto w-full">
+        <header className="flex justify-between items-center py-4 px-4 md:py-6 md:px-8 max-w-7xl mx-auto w-full">
             <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold tracking-tight text-stone-800">
                     {t('appTitle')}

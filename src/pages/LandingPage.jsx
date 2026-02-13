@@ -333,10 +333,10 @@ const LandingPage = ({ isSeniorMode }) => {
     };
 
     // Dynamic Classes based on Senior Mode
-    const containerClasses = isSeniorMode ? "space-y-12 py-10" : "space-y-8";
-    const titleClasses = isSeniorMode ? "text-5xl md:text-7xl leading-tight" : "text-4xl md:text-5xl tracking-tight";
-    const inputClasses = isSeniorMode ? "h-24 text-2xl pl-8" : "h-16 text-lg pl-6";
-    const buttonClasses = isSeniorMode ? "p-5" : "p-3";
+    const containerClasses = isSeniorMode ? "space-y-8 py-6 md:py-10" : "space-y-6 md:space-y-8";
+    const titleClasses = isSeniorMode ? "text-3xl md:text-5xl md:text-7xl leading-tight" : "text-3xl md:text-4xl md:text-5xl tracking-tight";
+    const inputClasses = isSeniorMode ? "h-20 text-xl pl-6" : "h-14 md:h-16 text-base md:text-lg pl-5 md:pl-6";
+    const buttonClasses = isSeniorMode ? "p-4" : "p-2.5 md:p-3";
     const iconSize = isSeniorMode ? "w-8 h-8" : "w-5 h-5";
     const responseTextClasses = isSeniorMode ? "text-2xl leading-relaxed font-medium" : "";
 
@@ -378,14 +378,14 @@ const LandingPage = ({ isSeniorMode }) => {
                         </div>
 
                         {/* Action Buttons: 
-                            - Mobile (Default): Flex Row Below Input
-                            - Desktop (md:): Absolute Inside Input (unless Senior Mode is ON)
+                            - Mobile: Integrated row below input with backdrop
+                            - Desktop: Absolute inside input
                         */}
-                        <div className={`flex justify-center gap-4 transition-all duration-300
+                        <div className={`flex justify-center gap-3 transition-all duration-300
                             ${isSeniorMode
-                                ? 'flex-row mt-6 scale-110' // Senior Mode: Always below, larger
-                                : 'mt-4 md:mt-0 md:absolute md:right-16 md:top-1/2 md:-translate-y-1/2' // Normal: Below on mobile, Inside on Desktop
-                            }`}>
+                                ? 'flex-row mt-4 scale-100'
+                                : 'mt-3 md:mt-0 md:absolute md:right-16 md:top-1/2 md:-translate-y-1/2'
+                            } ${!isSeniorMode && 'p-1.5 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/40 md:bg-transparent md:border-0 md:backdrop-blur-none md:p-0'}`}>
 
                             {/* Hidden File Inputs */}
                             <input
@@ -542,7 +542,7 @@ const LandingPage = ({ isSeniorMode }) => {
                     {Object.values(t('quickLinks', { returnObjects: true })).map((item) => (
                         <button key={item}
                             onClick={() => setQuery(item)}
-                            className={`rounded-full bg-white/40 hover:bg-white/70 border border-white/50 text-stone-700 font-medium transition-all backdrop-blur-sm shadow-sm hover:shadow-md ${isSeniorMode ? 'px-8 py-4 text-xl' : 'px-5 py-2 text-sm'}`}
+                            className={`rounded-full bg-white/40 hover:bg-white/70 border border-white/50 text-stone-700 font-medium transition-all backdrop-blur-sm shadow-sm hover:shadow-md active:scale-95 ${isSeniorMode ? 'px-6 py-3 text-lg' : 'px-4 py-2 text-xs md:text-sm'}`}
                         >
                             {item}
                         </button>
