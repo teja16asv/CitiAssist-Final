@@ -348,14 +348,14 @@ const LandingPage = ({ isSeniorMode }) => {
                 </h2>
 
                 <form onSubmit={handleSearch} className="relative w-full max-w-2xl mx-auto">
-                    <div className="relative group flex flex-col gap-4">
+                    <div className="relative group flex flex-col md:block gap-4">
                         <div className="relative w-full">
                             <input
                                 type="text"
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 placeholder={isListening ? t('listening') : t('searchPlaceholder')}
-                                className={`w-full ${inputClasses} ${isSeniorMode ? 'pr-20' : 'pr-32'} rounded-3xl border-0 shadow-lg shadow-stone-300/40 focus:ring-2 focus:ring-stone-400 focus:shadow-xl bg-white/80 backdrop-blur-sm placeholder:text-stone-400 text-stone-800 transition-all duration-300 outline-none ${isListening ? 'ring-2 ring-red-400 animate-pulse' : ''}`}
+                                className={`w-full ${inputClasses} ${isSeniorMode ? 'pr-20' : 'pr-14 md:pr-40'} rounded-3xl border-0 shadow-lg shadow-stone-300/40 focus:ring-2 focus:ring-stone-400 focus:shadow-xl bg-white/80 backdrop-blur-sm placeholder:text-stone-400 text-stone-800 transition-all duration-300 outline-none ${isListening ? 'ring-2 ring-red-400 animate-pulse' : ''}`}
                             />
 
                             {/* Standard Search Button (Inside Input) */}
@@ -377,9 +377,17 @@ const LandingPage = ({ isSeniorMode }) => {
                             </div>
                         </div>
 
-                        {/* Action Buttons: Below input for Mobile/Senior Mode to prevent overlap */}
-                        <div className={`flex justify-center gap-4 ${isSeniorMode ? 'flex-row' : 'absolute right-20 top-1/2 -translate-y-1/2'}`}>
-                            {/* Hidden File Input */}
+                        {/* Action Buttons: 
+                            - Mobile (Default): Flex Row Below Input
+                            - Desktop (md:): Absolute Inside Input (unless Senior Mode is ON)
+                        */}
+                        <div className={`flex justify-center gap-4 transition-all duration-300
+                            ${isSeniorMode
+                                ? 'flex-row mt-6 scale-110' // Senior Mode: Always below, larger
+                                : 'mt-4 md:mt-0 md:absolute md:right-16 md:top-1/2 md:-translate-y-1/2' // Normal: Below on mobile, Inside on Desktop
+                            }`}>
+
+                            {/* Hidden File Inputs */}
                             <input
                                 type="file"
                                 ref={fileInputRef}
