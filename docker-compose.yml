@@ -8,12 +8,8 @@ services:
     environment:
       # Pass the API key from the host's .env file
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-    volumes:
-      # Map current directory to /app so changes align (optional, good for dev)
-      - .:/app
-      # Exclude node_modules/dist from being mapped back to host or vice versa
-      - /app/node_modules
-      - /app/__pycache__
+      # Render automatically sets PORT, so we don't need to force it here unless testing locally
+      - PORT=5000
 
   frontend:
     build:
@@ -24,5 +20,6 @@ services:
     depends_on:
       - backend
     environment:
-      # Frontend connects to localhost because it runs in browser, but if SSR, it might need this
-      - VITE_API_URL=http://localhost:5000
+      # IN PRODUCTION (Render): You must set this to your actual Backend URL (e.g., https://citiassist-backend.onrender.com)
+      # For local Docker testing, localhost is fine.
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:5000}
