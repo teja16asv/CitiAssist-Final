@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Logo from './Logo';
 
 const SplashScreen = () => {
     const [phase, setPhase] = useState('enter'); // enter, hold, exit
@@ -32,23 +33,21 @@ const SplashScreen = () => {
             `}>
                 {/* Logo Icon */}
                 <div className="mb-6 relative">
-                    <div className="w-24 h-24 bg-stone-800 rounded-2xl rotate-3 shadow-2xl flex items-center justify-center animate-[bounce_2s_infinite]">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="white" className="w-12 h-12">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
-                        </svg>
+                    <div className="w-24 h-24 rounded-2xl rotate-3 shadow-2xl flex items-center justify-center animate-[bounce_2s_infinite]">
+                        <Logo className="w-full h-full drop-shadow-2xl" />
                     </div>
                     <div className="absolute -inset-4 bg-stone-400/20 blur-xl rounded-full -z-10 animate-pulse"></div>
                 </div>
 
                 {/* Text */}
-                <h1 className="text-6xl md:text-8xl font-black text-stone-800 tracking-tighter drop-shadow-sm">
+                <h1 className="text-5xl md:text-8xl font-black text-stone-800 tracking-tighter drop-shadow-sm">
                     Citi<span className="text-transparent bg-clip-text bg-gradient-to-r from-stone-600 to-stone-400">Assist</span>
                 </h1>
 
                 <div className="mt-4 flex items-center gap-3">
-                    <div className="h-[1px] w-12 bg-stone-400"></div>
-                    <p className="text-lg font-medium text-stone-500 uppercase tracking-[0.3em]">Smart City Companion</p>
-                    <div className="h-[1px] w-12 bg-stone-400"></div>
+                    <div className="h-[1px] w-8 md:w-16 bg-stone-400"></div>
+                    <p className="text-sm md:text-lg font-medium text-stone-500 uppercase tracking-[0.2em] md:tracking-[0.3em] whitespace-nowrap">Smart City Companion</p>
+                    <div className="h-[1px] w-8 md:w-16 bg-stone-400"></div>
                 </div>
             </div>
         </div>

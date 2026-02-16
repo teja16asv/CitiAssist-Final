@@ -348,14 +348,14 @@ const LandingPage = ({ isSeniorMode }) => {
                 </h2>
 
                 <form onSubmit={handleSearch} className="relative w-full max-w-2xl mx-auto">
-                    <div className="relative group flex flex-col md:block gap-4">
+                    <div className="relative group flex flex-col lg:block gap-4">
                         <div className="relative w-full">
                             <input
                                 type="text"
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 placeholder={isListening ? t('listening') : t('searchPlaceholder')}
-                                className={`w-full ${inputClasses} ${isSeniorMode ? 'pr-20' : 'pr-14 md:pr-40'} rounded-3xl border-0 shadow-lg shadow-stone-300/40 focus:ring-2 focus:ring-stone-400 focus:shadow-xl bg-white/80 backdrop-blur-sm placeholder:text-stone-400 text-stone-800 transition-all duration-300 outline-none ${isListening ? 'ring-2 ring-red-400 animate-pulse' : ''}`}
+                                className={`w-full ${inputClasses} ${isSeniorMode ? 'pr-20' : 'pr-14 lg:pr-40'} rounded-3xl border-0 shadow-lg shadow-stone-300/40 focus:ring-2 focus:ring-stone-400 focus:shadow-xl bg-white/80 backdrop-blur-sm placeholder:text-stone-400 text-stone-800 transition-all duration-300 outline-none ${isListening ? 'ring-2 ring-red-400 animate-pulse' : ''}`}
                             />
 
                             {/* Standard Search Button (Inside Input) */}
@@ -384,8 +384,8 @@ const LandingPage = ({ isSeniorMode }) => {
                         <div className={`flex justify-center gap-3 transition-all duration-300
                             ${isSeniorMode
                                 ? 'flex-row mt-4 scale-100'
-                                : 'mt-3 md:mt-0 md:absolute md:right-16 md:top-1/2 md:-translate-y-1/2'
-                            } ${!isSeniorMode && 'p-1.5 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/40 md:bg-transparent md:border-0 md:backdrop-blur-none md:p-0'}`}>
+                                : 'mt-3 lg:mt-0 lg:absolute lg:right-16 lg:top-1/2 lg:-translate-y-1/2'
+                            } ${!isSeniorMode && 'p-1.5 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/40 lg:bg-transparent lg:border-0 lg:backdrop-blur-none lg:p-0'}`}>
 
                             {/* Hidden File Inputs */}
                             <input

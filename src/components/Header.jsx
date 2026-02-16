@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import Logo from './Logo';
 
 const Header = ({ isSeniorMode, toggleSeniorMode }) => {
     const { t, i18n } = useTranslation();
@@ -21,7 +22,8 @@ const Header = ({ isSeniorMode, toggleSeniorMode }) => {
 
     return (
         <header className="flex justify-between items-center py-4 px-4 md:py-6 md:px-8 max-w-7xl mx-auto w-full">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+                <Logo className="w-8 h-8 md:w-10 md:h-10 shadow-sm rounded-xl" />
                 <h1 className="text-2xl font-bold tracking-tight text-stone-800">
                     {t('appTitle')}
                 </h1>
