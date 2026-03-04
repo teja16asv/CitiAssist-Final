@@ -213,6 +213,126 @@ def analyze_document():
         traceback.print_exc()
         return jsonify({'error': 'Document analysis failed', 'details': str(e)}), 500
 
+# Global dictionary to temporarily hold form images in memory for the wizard session
+# In production, this should be Redis or an S3 bucket
+form_sessions = {}
+import uuid
+
+@app.route('/api/start-form-fill', methods=['POST'])
+def start_form_fill():
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image uploaded'}), 400
+            
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+
+        image_bytes = file.read()
+        from PIL import Image
+        import io
+        image = Image.open(io.BytesIO(image_bytes))
+        
+        # Save session
+        session_id = str(uuid.uuid4())
+        form_sessions[session_id] = image
+        
+        prompt = """
+        You are an expert document analysis AI working for the government of Telangana.
+        Look at this image of a blank document or form. 
+        Identify every visual BLANK LINE or BLANK BOX where a citizen is expected to write their information.
+        
+        RETURN ONLY A VERY STRICT JSON ARRAY OF OBJECTS. Do not include markdown formatting or backticks.
+        Each object must contain EXACTLY:
+        1. "field_name": A short programmatic name (e.g. "applicant_name").
+        2. "question": A friendly, conversational question asking the citizen for this data (e.g. "What is your full name?").
+        3. "box_2d": An array of four integers [ymin, xmin, ymax, xmax] representing the bounding box of the BLANK AREA. 
+           These coordinates MUST be normalized to a 1000x1000 scale. For example, [200, 100, 250, 400].
+           
+        Example Output:
+        [
+          {"field_name": "first_name", "question": "What is your first name?", "box_2d": [150, 200, 180, 500]}
+        ]
+        """
+        
+        # Using flash as it proved sufficient and faster in testing
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content([image, prompt])
+        
+        import json
+        clean_json = response.text.strip().removeprefix("```json").removesuffix("```").strip()
+        fields_data = json.loads(clean_json)
+        
+        return jsonify({
+            'session_id': session_id,
+            'fields': fields_data
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/fill-form', methods=['POST'])
+def fill_form():
+    try:
+        data = request.json
+        session_id = data.get('session_id')
+        answers = data.get('answers', {}) # Dict of {field_name: {"answer": "value", "box_2d": [...]}}
+        
+        if session_id not in form_sessions:
+            return jsonify({'error': 'Session expired or invalid'}), 400
+            
+        image = form_sessions[session_id].copy()
+        
+        from PIL import ImageDraw, ImageFont
+        import base64
+        import io
+        draw = ImageDraw.Draw(image)
+        
+        width, height = image.size
+        
+        # Try to load a standard font
+        try:
+            # You might need to adjust the font size depending on the image resolution
+            font = ImageFont.truetype("arial.ttf", 24)
+        except IOError:
+            font = ImageFont.load_default()
+
+        # Iterate over the answers and draw them
+        for field_name, field_data in answers.items():
+            text_value = str(field_data.get('answer', ''))
+            box_normalized = field_data.get('box_2d', [0, 0, 0, 0])
+            if len(box_normalized) == 4 and text_value:
+                ymin, xmin, ymax, xmax = box_normalized
+                
+                # Convert from 1000x1000 normalized scale back to actual image pixels
+                actual_x = int((xmin / 1000.0) * width)
+                
+                # We want to place the text slightly above the bottom line (ymax)
+                # or aligned exactly with ymin. Let's align it with ymin + a tiny buffer
+                actual_y = int((ymin / 1000.0) * height)
+                
+                # Draw the text in black
+                draw.text((actual_x + 5, actual_y + 2), text_value, fill=(0, 0, 150), font=font) # Dark blue ink
+                
+        # Convert the modified PIL image to a base64 string
+        buffered = io.BytesIO()
+        # Ensure image is in a saveable mode
+        if image.mode in ("RGBA", "P"):
+            image = image.convert("RGB")
+        image.save(buffered, format="JPEG", quality=85)
+        img_str = base64.b64encode(buffered.getvalue()).decode()
+        
+        return jsonify({
+            'filled_image_base64': f"data:image/jpeg;base64,{img_str}"
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Render provides PORT env var. Default to 5000 for local dev.
     port = int(os.environ.get("PORT", 5000))

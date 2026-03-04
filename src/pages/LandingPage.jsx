@@ -21,11 +21,20 @@ const LandingPage = ({ isSeniorMode }) => {
     const [locationInput, setLocationInput] = useState('');
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
+    // --- FORM WIZARD STATE ---
+    const [wizardActive, setWizardActive] = useState(false);
+    const [wizardFields, setWizardFields] = useState([]); // Array of fields from API
+    const [currentWizardIndex, setCurrentWizardIndex] = useState(0);
+    const [wizardAnswers, setWizardAnswers] = useState({}); // { field_name: { answer, box_2d } }
+    const [wizardSessionId, setWizardSessionId] = useState('');
+    const [wizardReviewMode, setWizardReviewMode] = useState(false);
+    const [filledFormImage, setFilledFormImage] = useState(null);
+    const formInputRef = useRef(null);
+
     // Auth context for restricting specific actions
     const { currentUser } = useAuth();
 
     const fileInputRef = useRef(null);
-    const docInputRef = useRef(null);
 
     useEffect(() => {
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -193,6 +202,13 @@ const LandingPage = ({ isSeniorMode }) => {
         setLocationInput('');   // Clear location input
         window.speechSynthesis.cancel();
 
+        // Reset Wizard
+        setWizardActive(false);
+        setWizardFields([]);
+        setWizardAnswers({});
+        setWizardReviewMode(false);
+        setFilledFormImage(null);
+
         const offlineSurvivalData = `
 # 🚨 OFFLINE CONNECTION DETECTED
 
@@ -259,6 +275,35 @@ const LandingPage = ({ isSeniorMode }) => {
     const handleSearch = async (e) => {
         e.preventDefault();
 
+        // --- WIZARD INTERCEPTOR ---
+        if (wizardActive && !wizardReviewMode) {
+            if (!query.trim()) return;
+
+            const currentField = wizardFields[currentWizardIndex];
+
+            // Save answer
+            setWizardAnswers(prev => ({
+                ...prev,
+                [currentField.field_name]: {
+                    answer: query,
+                    box_2d: currentField.box_2d
+                }
+            }));
+
+            setQuery('');
+
+            // Move to next question or enter Review Mode
+            if (currentWizardIndex < wizardFields.length - 1) {
+                const nextField = wizardFields[currentWizardIndex + 1];
+                setCurrentWizardIndex(currentWizardIndex + 1);
+                setChatResponse(nextField.question);
+            } else {
+                setWizardReviewMode(true);
+                setChatResponse("✅ All questions answered! Please review your details below. Tap any answer to edit it before we generate your final PDF.");
+            }
+            return;
+        }
+
         // Smart "Near Me" Detection
         if (query.toLowerCase().includes('near me')) {
             if ('geolocation' in navigator) {
@@ -306,14 +351,6 @@ const LandingPage = ({ isSeniorMode }) => {
             setIsLoginModalOpen(true);
         } else {
             fileInputRef.current?.click();
-        }
-    };
-
-    const triggerDocUpload = () => {
-        if (!currentUser) {
-            setIsLoginModalOpen(true);
-        } else {
-            docInputRef.current?.click();
         }
     };
 
@@ -370,41 +407,104 @@ const LandingPage = ({ isSeniorMode }) => {
         }
     };
 
-    const handleDocUpload = async (e) => {
+    // --- ADVANCED FORM FILLER LOGIC ---
+    const triggerFormUpload = () => {
+        if (!currentUser) {
+            setIsLoginModalOpen(true);
+        } else {
+            formInputRef.current?.click();
+        }
+    };
+
+    const handleFormUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        setIsLoading(true);
+        const imageUrl = URL.createObjectURL(file);
+        setUploadedImage(imageUrl);
         setChatResponse('');
-        setQuery('Analyzing document... 📄');
+        setFilledFormImage(null);
+        setWizardReviewMode(false);
+        setIsLoading(true);
+        setQuery('Scanning blank document for fields... 🔍');
         window.speechSynthesis.cancel();
 
         const formData = new FormData();
         formData.append('image', file);
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/analyze-document`, {
+            const response = await fetch(`${API_BASE_URL}/api/start-form-fill`, {
                 method: 'POST',
                 body: formData,
             });
 
             const data = await response.json();
 
-            if (data.response) {
-                setChatResponse(data.response);
+            if (data.fields && data.fields.length > 0) {
+                setWizardActive(true);
+                setWizardFields(data.fields);
+                setCurrentWizardIndex(0);
+                setWizardSessionId(data.session_id);
+                setWizardAnswers({});
+                setChatResponse(`Document analyzed! I found ${data.fields.length} blank fields. Let's fill them out together.\n\n**${data.fields[0].question}**`);
             } else if (data.error) {
-                setChatResponse(`Error: ${data.error} ${data.details || ''}`);
+                setChatResponse(`Error: ${data.error}`);
             } else {
-                setChatResponse('Error analyzing document.');
+                setChatResponse('Could not detect any blank lines to fill on this document.');
             }
         } catch (error) {
-            console.error('Error uploading document:', error);
-            setChatResponse('Network error: Unable to upload document.');
+            console.error('Error starting form filler:', error);
+            setChatResponse('Network error: Unable to analyze document.');
         } finally {
             setIsLoading(false);
             setQuery('');
-            // Reset input so same file can be selected again
-            e.target.value = null;
+            e.target.value = null; // Reset
+        }
+    };
+
+    const generateFilledForm = async () => {
+        setIsLoading(true);
+        setChatResponse('Printing your answers onto the official document... 🖨️');
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/fill-form`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: wizardSessionId,
+                    answers: wizardAnswers
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.filled_image_base64) {
+                setWizardActive(false); // End wizard
+                setWizardReviewMode(false);
+                setFilledFormImage(data.filled_image_base64);
+                setChatResponse("✅ **Success!** Your document has been perfectly filled out. Click the button below the image to download it.");
+            } else {
+                setChatResponse(`Error generating form: ${data.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Error generating form:', error);
+            setChatResponse('Network error while generating the final document.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Allow user to manually fix an answer in the Review Card
+    const editWizardAnswer = (fieldName) => {
+        const newValue = prompt(`Edit answer for ${fieldName}:`, wizardAnswers[fieldName]?.answer || "");
+        if (newValue !== null) {
+            setWizardAnswers(prev => ({
+                ...prev,
+                [fieldName]: {
+                    ...prev[fieldName],
+                    answer: newValue
+                }
+            }));
         }
     };
 
@@ -417,7 +517,7 @@ const LandingPage = ({ isSeniorMode }) => {
     const responseTextClasses = isSeniorMode ? "text-2xl leading-relaxed font-medium" : "";
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 w-full">
+        <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 w-full" >
             <div className={`w-full max-w-3xl text-center animate-fade-in-up ${containerClasses}`}>
                 <h2 className={`${titleClasses} font-bold text-stone-800`}>
                     {t('heroTitle')}
@@ -463,6 +563,17 @@ const LandingPage = ({ isSeniorMode }) => {
                                 : 'mt-3 lg:mt-0 lg:absolute lg:right-16 lg:top-1/2 lg:-translate-y-1/2'
                             } ${!isSeniorMode && 'p-1.5 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/40 lg:bg-transparent lg:border-0 lg:backdrop-blur-none lg:p-0'}`}>
 
+                            <button
+                                type="button"
+                                onClick={triggerFormUpload}
+                                className={`${buttonClasses} rounded-full transition-transform active:scale-95 flex items-center justify-center bg-white/50 backdrop-blur-md border border-white/60 text-stone-600 hover:bg-white hover:text-stone-900 shadow-sm group/btn relative`}
+                                title="Auto-Fill Document Wizard"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={iconSize}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                </svg>
+                            </button>
+
                             {/* Hidden File Inputs */}
                             <input
                                 type="file"
@@ -473,8 +584,8 @@ const LandingPage = ({ isSeniorMode }) => {
                             />
                             <input
                                 type="file"
-                                ref={docInputRef}
-                                onChange={handleDocUpload}
+                                ref={formInputRef}
+                                onChange={handleFormUpload}
                                 accept="image/*"
                                 className="hidden"
                             />
@@ -489,17 +600,6 @@ const LandingPage = ({ isSeniorMode }) => {
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={iconSize}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-                                </svg>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={triggerDocUpload}
-                                className={`${buttonClasses} rounded-full transition-transform active:scale-95 flex items-center justify-center bg-white/50 backdrop-blur-md border border-white/60 text-stone-600 hover:bg-white hover:text-stone-900 shadow-sm`}
-                                aria-label="Analyze Document"
-                                title="Simplify Paperwork (Requires Login)"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={iconSize}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                                 </svg>
                             </button>
                             {browserSupportsSpeech && (
@@ -520,7 +620,7 @@ const LandingPage = ({ isSeniorMode }) => {
                     </div>
                 </form>
 
-                {(chatResponse || uploadedImage) && (
+                {(chatResponse || uploadedImage || wizardActive || filledFormImage) && (
                     <div className="w-full max-w-2xl mx-auto mt-6 bg-white/90 backdrop-blur-md p-6 rounded-2xl shadow-xl text-left animate-fade-in border border-white/50">
                         {uploadedImage && (
                             <div className="mb-6 flex justify-center">
@@ -533,41 +633,162 @@ const LandingPage = ({ isSeniorMode }) => {
                         )}
 
                         {chatResponse && (
-                            <div className={`prose prose-stone max-w-none prose-a:text-blue-600 prose-a:underline hover:prose-a:text-blue-800 ${responseTextClasses}`}>
-                                <ReactMarkdown
-                                    components={{
-                                        a: ({ node, ...props }) => (
-                                            <a
-                                                {...props}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={`inline-flex items-center gap-1.5 px-3 py-1 my-1 font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:text-blue-800 transition-colors no-underline ${isSeniorMode ? 'text-xl py-2 px-4' : 'text-sm'}`}
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={isSeniorMode ? "w-6 h-6" : "w-4 h-4"}>
-                                                    <path fillRule="evenodd" d="M12.577 4.878a.75.75 0 01.919-.53l4.78 1.281a.75.75 0 01.531.919l-1.281 4.78a.75.75 0 01-1.449-.387l.81-3.022a19.407 19.407 0 00-5.594 5.203.75.75 0 01-1.139.093L1.928 4.733a.75.75 0 11.535-1.405l7.26 2.768a20.897 20.897 0 014.854-1.218z" clipRule="evenodd" />
+                            <div className="w-full max-w-4xl mx-auto text-left mt-8 mb-12 animate-fade-in-up">
+                                <div className="bg-white/90 backdrop-blur border border-stone-200 shadow-xl rounded-3xl p-6 md:p-8 flex items-start gap-4">
+                                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-stone-100 flex items-center justify-center flex-shrink-0 shadow-inner">
+                                        <span className="text-xl md:text-2xl">🤖</span>
+                                    </div>
+                                    <div className={`flex-1 w-full overflow-hidden prose prose-stone max-w-none text-stone-700 font-medium whitespace-pre-wrap ${responseTextClasses}`}>
+                                        <ReactMarkdown
+                                            components={{
+                                                img: ({ node, ...props }) => (
+                                                    <img {...props} className="max-w-full h-auto rounded-xl shadow-md my-4" />
+                                                ),
+                                                a: ({ node, ...props }) => (
+                                                    <a {...props} className="text-blue-600 hover:text-blue-800 underline decoration-blue-300 underline-offset-4" target="_blank" rel="noopener noreferrer" />
+                                                ),
+                                                ul: ({ node, ...props }) => <ul className="space-y-4 my-4 list-none pl-0" {...props} />,
+                                                li: ({ node, ...props }) => (
+                                                    <li className="flex gap-3 items-start p-3 bg-white/50 rounded-lg border border-white/60" {...props}>
+                                                        <span className={`mt-2 rounded-full bg-stone-400 flex-shrink-0 ${isSeniorMode ? "w-3 h-3" : "w-2 h-2"}`} />
+                                                        <div className="flex-1 text-stone-700 leading-relaxed">{props.children}</div>
+                                                    </li>
+                                                ),
+                                                h3: ({ node, ...props }) => <h3 className={`${isSeniorMode ? "text-3xl mt-10 mb-6" : "text-xl mt-8 mb-4"} font-bold text-stone-800 border-b border-stone-200 pb-2`} {...props} />,
+                                                strong: ({ node, ...props }) => <strong className="font-bold text-stone-900" {...props} />,
+                                                p: ({ node, ...props }) => <p className="mb-4 text-stone-700 leading-relaxed" {...props} />,
+                                            }}
+                                        >
+                                            {displayedResponse}
+                                        </ReactMarkdown>
+
+                                        {/* WIZARD INLINE CHAT INPUT */}
+                                        {wizardActive && !wizardReviewMode && !isLoading && (
+                                            <form onSubmit={handleSearch} className="mt-8 flex flex-col sm:flex-row gap-3 animate-fade-in-up border-t border-stone-200 pt-6">
+                                                <input
+                                                    type="text"
+                                                    autoFocus
+                                                    value={query}
+                                                    onChange={(e) => setQuery(e.target.value)}
+                                                    placeholder={isListening ? t('listening') : "Type your answer here..."}
+                                                    className={`flex-1 px-5 py-3 rounded-2xl border ${isListening ? 'border-red-400 ring-2 ring-red-400/50 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse' : 'border-stone-300'} shadow-inner focus:ring-2 focus:ring-stone-400 focus:border-transparent outline-none transition-all ${isSeniorMode ? 'text-xl h-14' : 'text-base'}`}
+                                                />
+                                                <div className="flex gap-2 w-full sm:w-auto">
+                                                    {browserSupportsSpeech && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={startListening}
+                                                            className={`px-4 py-3 rounded-2xl transition active:scale-95 flex items-center justify-center shadow-md ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'}`}
+                                                            aria-label="Dictate Answer"
+                                                            title="Dictate Answer"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                                                                <path d="M8.25 4.5a3.75 3.75 0 117.5 0v8.25a3.75 3.75 0 11-7.5 0V4.5z" />
+                                                                <path d="M6 10.5a.75.75 0 01.75.75v1.5a5.25 5.25 0 1010.5 0v-1.5a.75.75 0 011.5 0v1.5a6.751 6.751 0 01-6 6.709v2.291h3a.75.75 0 010 1.5h-7.5a.75.75 0 010-1.5h3v-2.291a6.751 6.751 0 01-6-6.709v-1.5A.75.75 0 016 10.5z" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        type="submit"
+                                                        disabled={!query.trim()}
+                                                        className="flex-1 sm:flex-none px-6 py-3 bg-stone-800 text-white font-medium rounded-2xl hover:bg-stone-700 transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-md"
+                                                    >
+                                                        Send
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* WIZARD REVIEW MODE CARD */}
+                        {wizardReviewMode && !filledFormImage && (
+                            <div className="w-full max-w-4xl mx-auto text-left mt-6 animate-fade-in-up">
+                                <div className="bg-white/95 backdrop-blur border-2 border-green-200 shadow-xl rounded-3xl p-6 md:p-8">
+                                    <h3 className="text-2xl font-bold text-stone-800 mb-6 flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-7 h-7 text-green-600">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Review Your Answers
+                                    </h3>
+
+                                    <div className="space-y-4 mb-8">
+                                        {wizardFields.map((field) => (
+                                            <div key={field.field_name} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-stone-50 rounded-xl border border-stone-200 hover:bg-stone-100 transition-colors cursor-pointer group" onClick={() => editWizardAnswer(field.field_name)}>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-1 flex items-center gap-2">
+                                                        {field.field_name.replace(/_/g, ' ')}
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                                                        </svg>
+                                                    </p>
+                                                    <p className="text-lg font-medium text-stone-800">
+                                                        {wizardAnswers[field.field_name]?.answer || <span className="text-red-500 italic">Missing</span>}
+                                                    </p>
+                                                </div>
+                                                <button className="mt-2 md:mt-0 px-4 py-2 text-sm font-medium text-stone-600 bg-white border border-stone-300 rounded-lg shadow-sm hover:bg-stone-50 transition-colors">
+                                                    Tap to Edit
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        onClick={generateFilledForm}
+                                        disabled={isLoading}
+                                        className="w-full py-4 bg-green-600 hover:bg-green-700 text-white text-xl font-bold rounded-xl shadow-lg shadow-green-600/30 transform transition-transform active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+                                    >
+                                        {isLoading ? (
+                                            <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                        ) : (
+                                            <>
+                                                Confirm & Generate PDF
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                                                 </svg>
-                                                {props.children}
-                                            </a>
-                                        ),
-                                        ul: ({ node, ...props }) => <ul className="space-y-4 my-4 list-none pl-0" {...props} />,
-                                        li: ({ node, ...props }) => (
-                                            <li className="flex gap-3 items-start p-3 bg-white/50 rounded-lg border border-white/60" {...props}>
-                                                <span className={`mt-2 rounded-full bg-stone-400 flex-shrink-0 ${isSeniorMode ? "w-3 h-3" : "w-2 h-2"}`} />
-                                                <div className="flex-1 text-stone-700 leading-relaxed">{props.children}</div>
-                                            </li>
-                                        ),
-                                        h3: ({ node, ...props }) => <h3 className={`${isSeniorMode ? "text-3xl mt-10 mb-6" : "text-xl mt-8 mb-4"} font-bold text-stone-800 border-b border-stone-200 pb-2`} {...props} />,
-                                        strong: ({ node, ...props }) => <strong className="font-bold text-stone-900" {...props} />,
-                                        p: ({ node, ...props }) => <p className="mb-4 text-stone-700 leading-relaxed" {...props} />,
-                                    }}
-                                >
-                                    {displayedResponse}
-                                </ReactMarkdown>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* WIZARD FINAL FILLED FORM DISPLAY */}
+                        {filledFormImage && (
+                            <div className="w-full max-w-4xl mx-auto text-left mt-6 animate-fade-in-up">
+                                <div className="bg-white/95 backdrop-blur border border-stone-200 shadow-xl rounded-3xl p-6 md:p-8 flex flex-col items-center">
+                                    <h3 className="text-2xl font-bold text-stone-800 mb-6 flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-7 h-7 text-green-600">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Your Filled Document is Ready
+                                    </h3>
+                                    <img
+                                        src={`data:image/jpeg;base64,${filledFormImage}`}
+                                        alt="Filled Form"
+                                        className="max-w-full h-auto max-h-[600px] border border-stone-300 rounded-xl shadow-lg mb-6"
+                                    />
+                                    <a
+                                        href={`data:image/jpeg;base64,${filledFormImage}`}
+                                        download="Filled_Document.jpg"
+                                        className="px-8 py-4 bg-stone-800 hover:bg-stone-700 text-white text-xl font-bold rounded-xl shadow-lg shadow-stone-800/20 transform transition-transform active:scale-95 flex items-center justify-center gap-3 w-full md:w-auto"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                        </svg>
+                                        Download Final PDF
+                                    </a>
+                                </div>
                             </div>
                         )}
 
                         {emailData && emailData.recipient_email && (
-                            <div className="mt-6 pt-4 border-t border-stone-200">
+                            <div className="mt-6 pt-4 border-t border-stone-200 w-full max-w-2xl mx-auto">
                                 <div className="mb-4">
                                     <label htmlFor="location" className="block text-sm font-medium text-stone-700 mb-1">
                                         Location of Issue (Optional)
@@ -651,7 +872,7 @@ const LandingPage = ({ isSeniorMode }) => {
                 onClose={() => setIsLoginModalOpen(false)}
                 isSeniorMode={isSeniorMode}
             />
-        </div>
+        </div >
     );
 };
 
