@@ -3,7 +3,7 @@ const CACHE_NAME = 'citiassist-v1';
 const urlsToCache = [
     '/',
     '/index.html',
-    '/vite.svg',
+    '/logo.svg',
     '/manifest.json'
 ];
 

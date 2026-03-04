@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 .env
+
+research_paper.txt
+CitiAssist_Research_Documentation.md

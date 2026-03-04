@@ -1,137 +1,161 @@
-# 🏙️ CitiAssist - Your Smart City Companion
+# 🏙️ CitiAssist - AI-Powered Smart City Companion
 
-![CitiAssist Banner](https://img.shields.io/badge/Status-Active-success) ![License](https://img.shields.io/badge/License-MIT-blue) ![Tech](https://img.shields.io/badge/AI-Powered-purple) ![Docker](https://img.shields.io/badge/Docker-Ready-blue)
+<div align="center">
+  <img src="public/logo.svg" alt="CitiAssist Logo" width="120" height="120" />
+  <br />
+  <br />
 
-**CitiAssist** is an intelligent, AI-powered smart city guide designed to bridge the gap between citizens and urban infrastructure. Built with accessibility at its core, it helps users navigate city services, report civic issues, and understand complex government paperwork using advanced Generative AI.
+  [![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)](https://github.com/teja16asv/CitiAssist-Final)
+  [![Tech](https://img.shields.io/badge/AI-Gemini%202.5-purple?style=for-the-badge)](https://deepmind.google/technologies/gemini/)
+  [![Stack](https://img.shields.io/badge/Stack-MERN%20%2B%20Python-blue?style=for-the-badge)](https://react.dev/)
+  [![Platform](https://img.shields.io/badge/Platform-PWA%20%7C%20Web-green?style=for-the-badge)](https://web.dev/progressive-web-apps/)
+
+  <p align="center">
+    <b>Bridging the gap between citizens and urban infrastructure through Generative AI.</b>
+    <br />
+    <i>Accessible • Multilingual • Action-Oriented</i>
+  </p>
+</div>
+
+---
+
+## 📖 Overview
+
+**CitiAssist** is a next-generation civic engagement platform designed to simplify urban living. It leverages **Multimodal AI** (Vision + Text + Voice) to help citizens navigate government services, report civic issues instantly, and understand complex paperwork. 
+
+Unlike traditional grievance portals, CitiAssist is **proactive and accessible**, featuring a dedicated **Senior Mode** for elderly citizens and **Multilingual Support** (English, Hindi, Telugu) to cater to diverse demographics.
+
+---
+
+## 🔬 Research Basis
+
+This project is grounded in cutting-edge research on **AI in Governance** and **Inclusive Smart Cities**.
+
+*   **Core Framework**: Based on *"Artificial Intelligence in Smart Cities: A Systematic Review"*, utilizing AI to enhance citizen engagement and service delivery efficiency.
+*   **Civic Issue Detection**: Implements concepts from *"Deep Learning for Automatic Detection and Classification of Urban Defects"*, using Computer Vision to analyze user-uploaded photos of potholes, waste, and infrastructure damage.
+*   **Accessibility**: Adheres to principles from *"Designing Inclusive Smart Cities: Accessibility for the Elderly"*, featuring high-contrast UIs, simplified navigation, and voice-first interactions.
 
 ---
 
 ## 🚀 Key Features
 
-### 🤖 AI-Powered City Guide
-*   **Context-Aware Chat**: Ask about hospitals, public transport, electricity, water, waste management, and government services.
-*   **Hyper-Local Knowledge**: Provides specific details, map links, and official portal URLs.
-*   **Scope Protection**: Strictly tailored to civic needs, filtering out irrelevant queries.
-*   **Streaming Responses**: Enjoy a natural, typewriter-style conversational interface.
+### 1. 🤖 Context-Aware City Guide
+*   **Intelligent Chatbot**: Answers queries about hospitals, metros, electricity bills, and more using real-time context.
+*   **Hyper-Local**: tailored for Indian cities (e.g., Hyderabad), providing relevant location-based data.
+*   **Streaming Responses**: Delivers information in a natural, conversational typewriter style.
 
-### 📸 Snap & Solve (AI Civic Reporter)
-*   **Visual Complaint Drafting**: Spot a pothole or uncollected trash? Just snap a photo.
-*   **Auto-Drafting**: The AI analyzes the image and instantly drafts a formal, polite complaint letter to the Municipal Commissioner, tailored for your location.
+### 2. 📸 Snap & Solve (AI Civic Reporter)
+*   **Visual Complaint Drafting**: Users can upload a photo of a civic issue (e.g., a broken streetlight).
+*   **Auto-Location**: Automatically captures GPS coordinates to pinpoint the issue.
+*   **Formal Letter Generation**: The AI analyzes the image and drafts a perfectly formatted, polite complaint letter to the relevant authority (e.g., Municipal Commissioner).
 
-### 📄 Paperwork Simplifier
-*   **Document Decoder**: Confused by a government form? Upload a photo of it.
-*   **Step-by-Step Guides**: The AI identifies the document and explains exactly how to fill it out in simple language.
+### 3. 📄 Paperwork Simplifier
+*   **Document Analysis**: Upload a photo of any confusing government form or notice.
+*   **Step-by-Step Guidance**: The AI decodes the document and explains exactly how to fill it out or respond to it in simple language.
 
-### 👴 Senior Citizen Mode
-*   **Accessibility First**: A dedicated mode with high-contrast large text, simplified UI, and slower speech rates.
-*   **Voice-First Interface**: Full voice command support and Text-to-Speech responses for users who prefer listening over reading.
+### 4. 👴 Senior Citizen Mode
+*   **Accessible UI**: One-tap toggle for larger text, high-contrast buttons, and simplified layouts.
+*   **Slow-Speech TTS**: Text-to-Speech engine optimized for seniors with slower, clearer articulation.
+*   **Voice Commands**: Full hands-free operation supports "near me" voice searches.
 
-### 🌏 Multilingual Support
-*   **Language Detection**: Automatically detects and responds in **English, Hindi, and Telugu**.
-*   **Localized Context**: optimized for Indian cities context.
+### 5. 🌏 Multilingual & PWA Ready
+*   **Language Support**: Seamlessly switches between **English, Hindi, and Telugu**.
+*   **Installable App**: Fully functional **Progressive Web App (PWA)** that works offline and can be installed on mobile home screens.
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Technology Stack
 
 ### Frontend
-*   **Framework**: React (Vite)
-*   **Styling**: Tailwind CSS (Glassmorphism design)
-*   **Speech**: Web Speech API (Recognition & Synthesis)
-*   **Deployment**: Docker / Static Hosting
+- **Framework**: React.js (Vite)
+- **Styling**: Tailwind CSS (Glassmorphism & Neumorphism)
+- **State Management**: React Hooks & Context API
+- **PWA**: Service Workers & Manifest for native-like experience
 
 ### Backend
-*   **Server**: Flask (Python) with Gunicorn
-*   **AI Model**: Google Gemini 2.5 Flash (via `google-generativeai`)
-*   **Image Processing**: Pillow (PIL)
-*   **Analysis**: Gemini Vision (Multimodal)
+- **Server**: Python (Flask)
+- **WSGI**: Gunicorn for production-grade performance
+- **AI Core**: Google **Gemini 2.5 Flash** (via `google-generativeai` SDK)
+- **Image Processing**: Pillow (PIL)
+
+### DevOps
+- **Containerization**: Docker & Docker Compose
+- **Hosting**: Render (Web Service)
 
 ---
 
-## 🏗️ Local Installation
+## 🏗️ Installation & Setup
 
 ### Prerequisites
-*   Node.js & npm
-*   Python 3.8+
+*   Node.js (v16+)
+*   Python (v3.8+)
 *   Google Gemini API Key
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/CitiAssist.git
-cd CitiAssist
+git clone https://github.com/teja16asv/CitiAssist-Final.git
+cd CitiAssist-Final
 ```
 
 ### 2. Backend Setup
 ```bash
-# Install Python dependencies
+# Navigate to root (or backend folder if separated)
 pip install -r requirements.txt
 
-# Set up Environment Variables
-# Create a .env file in the root directory
+# Create .env file
 echo "GEMINI_API_KEY=your_api_key_here" > .env
 
-# Run the Server
+# Run Server
 python main.py
 ```
 
 ### 3. Frontend Setup
 ```bash
-# Install Node dependencies
+# Setup dependencies and start dev server
 npm install
-
-# Run the Development Server
 npm run dev
 ```
+Visit `http://localhost:5173` to explore the app.
 
-Visit `http://localhost:5173` to view the application.
-
----
-
-## 🐳 Docker Support (Recommended)
-
-Run the entire stack in isolated containers with a single command.
-
-1.  Ensure **Docker Desktop** is running.
-2.  Make sure your `.env` file exists.
-3.  Run:
-    ```bash
-    docker-compose up --build
-    ```
-4.  Access the app at `http://localhost:5173`.
+### 🐳 Docker Setup (Recommended)
+Run the entire stack with a single command:
+```bash
+docker-compose up --build
+```
 
 ---
 
-## ☁️ Deployment (Render)
+## 📂 Project Structure
 
-This project is configured for **Zero-Config Deployment** on Render.
-
-1.  Push your code to GitHub.
-2.  Log in to [Render](https://render.com).
-3.  Create a new **Blueprint Instance**.
-4.  Select your repository.
-5.  Enter your `GEMINI_API_KEY` when prompted.
-6.  Render will automatically deploy the Backend (Python/Gunicorn) and Frontend (React/Static) and link them together.
-
----
-
-## 💡 Usage Examples
-
-*   **Public Transport**: "What is the timing for the last metro from Hitech City?"
-*   **Government Services**: "How do I apply for a PAN card?"
-*   **Snap & Solve**: Upload a photo of a broken street light -> Get a complaint letter.
-*   **Paperwork**: Upload a Driving License form -> Get filling instructions.
+```bash
+CitiAssist/
+├── public/              # Static assets (Manifest, Logos, Service Worker)
+├── src/
+│   ├── components/      # Reusable UI components (Header, Logo, Splash)
+│   ├── pages/           # Main Views (LandingPage.jsx)
+│   ├── App.jsx          # Root Component & Routing
+│   └── main.jsx         # Entry Point
+├── main.py              # Flask Backend API
+├── requirements.txt     # Python Dependencies
+├── package.json         # Node Dependencies
+├── docker-compose.yml   # Container Orchestration
+└── Dockerfile           # Build Instructions
+```
 
 ---
 
 ## 🤝 Contributing
-Contributions are welcome! Please fork the repo and submit a Pull Request.
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
+2.  Create your Feature Branch (`git checkout -b feature/NewFeature`)
+3.  Commit your Changes (`git commit -m 'Add some NewFeature'`)
+4.  Push to the Branch (`git push origin feature/NewFeature`)
 5.  Open a Pull Request
 
 ---
 
-**Made with ❤️ for Smart Cities.**
+<p align="center">
+  Made with ❤️ for <b>Smart Cities</b>
+</p>

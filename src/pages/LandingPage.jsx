@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
+import { useAuth } from '../context/AuthContext';
+import LoginModal from '../components/LoginModal';
 
 const LandingPage = ({ isSeniorMode }) => {
     let API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -17,6 +19,11 @@ const LandingPage = ({ isSeniorMode }) => {
     const [uploadedImage, setUploadedImage] = useState(null);
     const [emailData, setEmailData] = useState(null);
     const [locationInput, setLocationInput] = useState('');
+    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+    // Auth context for restricting specific actions
+    const { currentUser } = useAuth();
+
     const fileInputRef = useRef(null);
     const docInputRef = useRef(null);
 
@@ -146,17 +153,25 @@ const LandingPage = ({ isSeniorMode }) => {
 
                     const { latitude, longitude } = position.coords;
                     const locationQuery = `${label} near ${latitude}, ${longitude}`;
-
-                    // Update query visually (optional, or keep label) - let's keep label in input but send locationQuery
-                    // setQuery(locationQuery); // Actually, user might want to see what happened.
-
+                    await executeSearch(locationQuery);
+                } else if (currentUser?.location) {
+                    const { lat, lng } = currentUser.location;
+                    const locationQuery = `${label} near ${lat}, ${lng}`;
                     await executeSearch(locationQuery);
                 } else {
                     await executeSearch(label);
                 }
             } catch (error) {
                 console.warn("Location access denied or error:", error);
-                await executeSearch(label);
+
+                // Fallback to saved profile location if available
+                if (currentUser?.location) {
+                    const { lat, lng } = currentUser.location;
+                    const locationQuery = `${label} near ${lat}, ${lng}`;
+                    await executeSearch(locationQuery);
+                } else {
+                    await executeSearch(label);
+                }
             } finally {
                 // executeSearch handles isLoading(false) but we set it true here.
                 // If executeSearch is called, it sets loading true then false. 
@@ -172,12 +187,43 @@ const LandingPage = ({ isSeniorMode }) => {
         if (!searchQuery.trim()) return;
 
         setIsLoading(true);
-        setIsLoading(true);
         setChatResponse('');
         setUploadedImage(null); // Clear previous image on new search
         setEmailData(null);     // Clear previous email data
         setLocationInput('');   // Clear location input
         window.speechSynthesis.cancel();
+
+        const offlineSurvivalData = `
+# 🚨 OFFLINE CONNECTION DETECTED
+
+> **Don't Panic.** Your device is disconnected, but *CitiAssist* has loaded critical emergency data directly from its local memory.
+
+---
+
+### 🚑 Immediate Medical & Rescue
+*   **All-In-One Emergency:** \`112\`
+*   **Ambulance Services:** \`108\`
+*   **Fire Department:** \`101\`
+*   **Police Control Room:** \`100\`
+
+### 🛡️ Safety & Security
+*   **Women's Helpline (SHE Teams):** \`181\` | \`100\`
+*   **Cyber Crime Support:** \`1930\`
+*   **Traffic Police Helpline:** \`9010203626\`
+
+### ⚡ Civic Utilities (GHMC & TSSPDCL)
+*   **GHMC (Civic/Potholes/Garbage):** \`040-21111111\`
+*   **Electricity Control Room:** \`1912\`
+
+---
+*Please keep this screen open or take a screenshot if you are in an area with poor network reception.*
+`;
+
+        if (!navigator.onLine) {
+            setChatResponse(offlineSurvivalData);
+            setIsLoading(false);
+            return;
+        }
 
         try {
             const response = await fetch(`${API_BASE_URL}/api/chat`, {
@@ -203,7 +249,8 @@ const LandingPage = ({ isSeniorMode }) => {
             }
         } catch (error) {
             console.error('Error fetching chat response:', error);
-            setChatResponse('Network error: Unable to reach the backend server. Is python main.py running?');
+            // If it's a network error (like CORS failure due to offline, or backend down)
+            setChatResponse(offlineSurvivalData);
         } finally {
             setIsLoading(false);
         }
@@ -215,7 +262,7 @@ const LandingPage = ({ isSeniorMode }) => {
         // Smart "Near Me" Detection
         if (query.toLowerCase().includes('near me')) {
             if ('geolocation' in navigator) {
-                setIsLoading(true); // Show loading while fetching location
+                setIsLoading(true);
                 try {
                     const position = await new Promise((resolve, reject) => {
                         navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -224,21 +271,50 @@ const LandingPage = ({ isSeniorMode }) => {
                     });
 
                     const { latitude, longitude } = position.coords;
-                    // Append location to the query
                     const locationQuery = `${query} (Current Location: ${latitude}, ${longitude})`;
                     await executeSearch(locationQuery);
-                    return; // Stop here, executeSearch was called
+                    return;
                 } catch (error) {
                     console.warn("Location access denied or timed out:", error);
-                    // Fallback to normal search if location fails
+                    // Fallback to saved location
+                    if (currentUser?.location) {
+                        const { lat, lng } = currentUser.location;
+                        const locationQuery = `${query} (Current Location: ${lat}, ${lng})`;
+                        await executeSearch(locationQuery);
+                        return;
+                    }
                 }
+            } else if (currentUser?.location) {
+                // Browser doesn't support geolocation, but we have auth context
+                setIsLoading(true);
+                const { lat, lng } = currentUser.location;
+                const locationQuery = `${query} (Current Location: ${lat}, ${lng})`;
+                await executeSearch(locationQuery);
+                return;
             } else {
-                console.warn("Geolocation not supported");
+                console.warn("Geolocation not supported and no profile location saved.");
             }
         }
 
         // Normal search (or fallback)
         await executeSearch(query);
+    };
+
+    // Guard functions for Auth-required actions
+    const triggerImageUpload = () => {
+        if (!currentUser) {
+            setIsLoginModalOpen(true);
+        } else {
+            fileInputRef.current?.click();
+        }
+    };
+
+    const triggerDocUpload = () => {
+        if (!currentUser) {
+            setIsLoginModalOpen(true);
+        } else {
+            docInputRef.current?.click();
+        }
     };
 
     const handleImageUpload = async (e) => {
@@ -405,10 +481,10 @@ const LandingPage = ({ isSeniorMode }) => {
 
                             <button
                                 type="button"
-                                onClick={() => fileInputRef.current?.click()}
+                                onClick={triggerImageUpload}
                                 className={`${buttonClasses} rounded-full transition-transform active:scale-95 flex items-center justify-center bg-white/50 backdrop-blur-md border border-white/60 text-stone-600 hover:bg-white hover:text-stone-900 shadow-sm`}
                                 aria-label="Snap & Solve"
-                                title="Snap & Solve"
+                                title="Snap & Solve (Requires Login)"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={iconSize}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
@@ -417,10 +493,10 @@ const LandingPage = ({ isSeniorMode }) => {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => docInputRef.current?.click()}
+                                onClick={triggerDocUpload}
                                 className={`${buttonClasses} rounded-full transition-transform active:scale-95 flex items-center justify-center bg-white/50 backdrop-blur-md border border-white/60 text-stone-600 hover:bg-white hover:text-stone-900 shadow-sm`}
                                 aria-label="Analyze Document"
-                                title="Simplify Paperwork"
+                                title="Simplify Paperwork (Requires Login)"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={iconSize}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -539,9 +615,28 @@ const LandingPage = ({ isSeniorMode }) => {
                 )}
 
                 <div className="flex flex-wrap justify-center gap-4 pt-4">
+                    {/* Hardcoded Transit Route Demo Button */}
+                    <button
+                        onClick={() => {
+                            setQuery("Route: Secunderabad to Hitech City");
+                            handleSearch({ preventDefault: () => { } });
+                        }}
+                        className={`rounded-full bg-white/40 hover:bg-white/70 border border-white/50 text-stone-700 font-medium transition-all backdrop-blur-sm shadow-sm hover:shadow-md active:scale-95 flex items-center gap-2 ${isSeniorMode ? 'px-6 py-3 text-lg' : 'px-4 py-2 text-xs md:text-sm'}`}
+                        title="Demo Multi-Modal Transit Routing"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={isSeniorMode ? "w-6 h-6 text-stone-600" : "w-4 h-4 text-stone-600"}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+                        </svg>
+                        Route: Secunderabad to Hitech City
+                    </button>
+
+                    {/* Dynamic Language Quick Links */}
                     {Object.values(t('quickLinks', { returnObjects: true })).map((item) => (
                         <button key={item}
-                            onClick={() => setQuery(item)}
+                            onClick={() => {
+                                setQuery(item);
+                                handleSearch({ preventDefault: () => { } });
+                            }}
                             className={`rounded-full bg-white/40 hover:bg-white/70 border border-white/50 text-stone-700 font-medium transition-all backdrop-blur-sm shadow-sm hover:shadow-md active:scale-95 ${isSeniorMode ? 'px-6 py-3 text-lg' : 'px-4 py-2 text-xs md:text-sm'}`}
                         >
                             {item}
@@ -549,6 +644,13 @@ const LandingPage = ({ isSeniorMode }) => {
                     ))}
                 </div>
             </div>
+
+            {/* Global Login Modal for action interceptions */}
+            <LoginModal
+                isOpen={isLoginModalOpen}
+                onClose={() => setIsLoginModalOpen(false)}
+                isSeniorMode={isSeniorMode}
+            />
         </div>
     );
 };

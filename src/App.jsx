@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import LandingPage from './pages/LandingPage';
 import SplashScreen from './components/SplashScreen';
+import { AuthProvider } from './context/AuthContext';
+import SOSButton from './components/SOSButton';
 
 function App() {
   const [isSeniorMode, setIsSeniorMode] = useState(false);
@@ -20,16 +22,21 @@ function App() {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans text-civic-text w-full transition-all duration-300 ${isSeniorMode ? 'text-xl' : ''}`}>
-      <Header isSeniorMode={isSeniorMode} toggleSeniorMode={() => setIsSeniorMode(!isSeniorMode)} />
-      <main className="flex-grow flex flex-col">
-        <LandingPage isSeniorMode={isSeniorMode} />
-      </main>
+    <AuthProvider>
+      <div className={`min-h-screen flex flex-col font-sans text-civic-text w-full transition-all duration-300 ${isSeniorMode ? 'text-xl' : ''}`}>
+        <Header isSeniorMode={isSeniorMode} toggleSeniorMode={() => setIsSeniorMode(!isSeniorMode)} />
+        <main className="flex-grow flex flex-col">
+          <LandingPage isSeniorMode={isSeniorMode} />
+        </main>
 
-      <footer className="py-6 text-center text-sm text-stone-500/80">
-        &copy; {new Date().getFullYear()} CitiAssist. All rights reserved.
-      </footer>
-    </div>
+        <footer className="py-6 text-center text-sm text-stone-500/80">
+          &copy; {new Date().getFullYear()} CitiAssist. All rights reserved.
+        </footer>
+
+        {/* Global Floating SOS Button */}
+        <SOSButton isSeniorMode={isSeniorMode} />
+      </div>
+    </AuthProvider>
   );
 }
 
