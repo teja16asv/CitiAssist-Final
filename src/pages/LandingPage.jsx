@@ -96,7 +96,11 @@ const LandingPage = ({ isSeniorMode }) => {
     }, [chatResponse]);
 
     const startListening = () => {
-        if (!browserSupportsSpeech) return;
+        if (!browserSupportsSpeech) {
+            alert("Your browser does not support Speech Recognition. Please use Chrome or Edge.");
+            return;
+        }
+        window.speechSynthesis.cancel(); // Mute TTS immediately
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
@@ -112,25 +116,46 @@ const LandingPage = ({ isSeniorMode }) => {
         recognition.interimResults = false;
 
         recognition.onstart = () => {
+            console.log("Speech recognition started.");
             setIsListening(true);
         };
 
         recognition.onresult = (event) => {
             const transcript = event.results[0][0].transcript;
+            console.log("Speech recognized:", transcript);
             setQuery(transcript);
             setIsListening(false);
+
+            // Auto-submit voice input
+            if (transcript.trim()) {
+                handleSearch(transcript);
+            } else {
+                console.warn("Transcript was empty.");
+            }
         };
 
         recognition.onerror = (event) => {
-            console.error(event.error);
+            console.error("Speech recognition error:", event.error);
             setIsListening(false);
+            if (event.error === 'not-allowed') {
+                alert("Microphone access denied. Please allow microphone access in your browser settings.");
+            } else if (event.error === 'no-speech') {
+                alert("No speech was detected. Please try speaking again.");
+            } else {
+                alert(`Voice input error: ${event.error}`);
+            }
         };
 
         recognition.onend = () => {
+            console.log("Speech recognition ended.");
             setIsListening(false);
         };
 
-        recognition.start();
+        try {
+            recognition.start();
+        } catch (e) {
+            console.error("Could not start speech recognition:", e);
+        }
     };
 
 
@@ -272,12 +297,14 @@ const LandingPage = ({ isSeniorMode }) => {
         }
     };
 
-    const handleSearch = async (e) => {
-        e.preventDefault();
+    const handleSearch = async (eOrText) => {
+        if (eOrText && eOrText.preventDefault) eOrText.preventDefault();
+
+        const searchQuery = typeof eOrText === 'string' ? eOrText : query;
 
         // --- WIZARD INTERCEPTOR ---
         if (wizardActive && !wizardReviewMode) {
-            if (!query.trim()) return;
+            if (!searchQuery.trim()) return;
 
             const currentField = wizardFields[currentWizardIndex];
 
@@ -285,7 +312,7 @@ const LandingPage = ({ isSeniorMode }) => {
             setWizardAnswers(prev => ({
                 ...prev,
                 [currentField.field_name]: {
-                    answer: query,
+                    answer: searchQuery,
                     box_2d: currentField.box_2d
                 }
             }));
@@ -305,7 +332,7 @@ const LandingPage = ({ isSeniorMode }) => {
         }
 
         // Smart "Near Me" Detection
-        if (query.toLowerCase().includes('near me')) {
+        if (searchQuery.toLowerCase().includes('near me')) {
             if ('geolocation' in navigator) {
                 setIsLoading(true);
                 try {
@@ -316,7 +343,7 @@ const LandingPage = ({ isSeniorMode }) => {
                     });
 
                     const { latitude, longitude } = position.coords;
-                    const locationQuery = `${query} (Current Location: ${latitude}, ${longitude})`;
+                    const locationQuery = `${searchQuery} (Current Location: ${latitude}, ${longitude})`;
                     await executeSearch(locationQuery);
                     return;
                 } catch (error) {
@@ -324,7 +351,7 @@ const LandingPage = ({ isSeniorMode }) => {
                     // Fallback to saved location
                     if (currentUser?.location) {
                         const { lat, lng } = currentUser.location;
-                        const locationQuery = `${query} (Current Location: ${lat}, ${lng})`;
+                        const locationQuery = `${searchQuery} (Current Location: ${lat}, ${lng})`;
                         await executeSearch(locationQuery);
                         return;
                     }
@@ -333,7 +360,7 @@ const LandingPage = ({ isSeniorMode }) => {
                 // Browser doesn't support geolocation, but we have auth context
                 setIsLoading(true);
                 const { lat, lng } = currentUser.location;
-                const locationQuery = `${query} (Current Location: ${lat}, ${lng})`;
+                const locationQuery = `${searchQuery} (Current Location: ${lat}, ${lng})`;
                 await executeSearch(locationQuery);
                 return;
             } else {
@@ -342,7 +369,7 @@ const LandingPage = ({ isSeniorMode }) => {
         }
 
         // Normal search (or fallback)
-        await executeSearch(query);
+        await executeSearch(searchQuery);
     };
 
     // Guard functions for Auth-required actions
@@ -515,6 +542,32 @@ const LandingPage = ({ isSeniorMode }) => {
     const buttonClasses = isSeniorMode ? "p-4" : "p-2.5 md:p-3";
     const iconSize = isSeniorMode ? "w-8 h-8" : "w-5 h-5";
     const responseTextClasses = isSeniorMode ? "text-2xl leading-relaxed font-medium" : "";
+
+    const handleDownloadPdf = () => {
+        if (!filledFormImage) return;
+
+        try {
+            const byteCharacters = atob(filledFormImage);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'Filled_Document.jpg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Download failed:', error);
+            setChatResponse('Failed to download the document. Please try again.');
+        }
+    };
 
     return (
         <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 w-full" >
@@ -773,16 +826,15 @@ const LandingPage = ({ isSeniorMode }) => {
                                         alt="Filled Form"
                                         className="max-w-full h-auto max-h-[600px] border border-stone-300 rounded-xl shadow-lg mb-6"
                                     />
-                                    <a
-                                        href={`data:image/jpeg;base64,${filledFormImage}`}
-                                        download="Filled_Document.jpg"
+                                    <button
+                                        onClick={handleDownloadPdf}
                                         className="px-8 py-4 bg-stone-800 hover:bg-stone-700 text-white text-xl font-bold rounded-xl shadow-lg shadow-stone-800/20 transform transition-transform active:scale-95 flex items-center justify-center gap-3 w-full md:w-auto"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                                         </svg>
                                         Download Final PDF
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
                         )}

@@ -238,14 +238,18 @@ def start_form_fill():
         form_sessions[session_id] = image
         
         prompt = """
-        You are an expert document analysis AI working for the government of Telangana.
+        You are an expert document analysis AI working for the government of Telangana, dedicated to accessibility.
         Look at this image of a blank document or form. 
         Identify every visual BLANK LINE or BLANK BOX where a citizen is expected to write their information.
+        
+        CRITICAL ACCESSIBILITY INSTRUCTION:
+        Forms often use complex bureaucratic or legal terms (e.g., "Domicile", "Remittance", "Kin", "Spouse", "NOC"). 
+        You MUST simplify these tough fields so common, everyday people can easily understand them. Translate complex legalese into plain language.
         
         RETURN ONLY A VERY STRICT JSON ARRAY OF OBJECTS. Do not include markdown formatting or backticks.
         Each object must contain EXACTLY:
         1. "field_name": A short programmatic name (e.g. "applicant_name").
-        2. "question": A friendly, conversational question asking the citizen for this data (e.g. "What is your full name?").
+        2. "question": A friendly, conversational question asking the citizen for this data in VERY SIMPLE terms (e.g. Instead of "What is your domicile?", ask "What city or town do you permanently live in?").
         3. "box_2d": An array of four integers [ymin, xmin, ymax, xmax] representing the bounding box of the BLANK AREA. 
            These coordinates MUST be normalized to a 1000x1000 scale. For example, [200, 100, 250, 400].
            
