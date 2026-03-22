@@ -23,7 +23,7 @@ const LoginModal = ({ isOpen, onClose, isSeniorMode }) => {
             await loginWithGoogle();
             onClose(); // Close modal on success
         } catch (err) {
-            setError('Failed to log in with Google.');
+            setError(`Failed to log in with Google: ${err.message || 'Unknown error'}`);
             console.error(err);
         } finally {
             setLoading(false);
